@@ -1,0 +1,3 @@
+*.pyc
+bot/settings_local.py
+
