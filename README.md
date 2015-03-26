@@ -48,7 +48,7 @@ Bot simulates simple trading according to technical indicators.
 
 Use 
 ```
-./manage.py summry
+./manage.py summary
 ```
 to see all it's transactions.
 
