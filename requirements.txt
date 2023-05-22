@@ -1,0 +1,6 @@
+requests
+django
+bs4
+sklearn
+numpy
+scipy

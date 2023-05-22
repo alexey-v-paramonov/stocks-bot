@@ -12,6 +12,7 @@ from django.core.management import BaseCommand
 
 from stocks.models import CalendarData, CalendarDataState
 
+headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
 
 class Command(BaseCommand):
 
@@ -20,14 +21,15 @@ class Command(BaseCommand):
         print "Fetching calendar"
 
         try:
-            r = requests.get(settings.CALENDAR_URL)
+            r = requests.get(settings.CALENDAR_URL, headers=headers, timeout=20)
         except:
             print "Failed!"
             return "ERROR"
         else:
             print "Done!"
 
-        soup = BeautifulSoup(r.text)
+        #soup = BeautifulSoup(r.text)
+        soup = BeautifulSoup(r.text, "lxml")
 
         event_rows = soup.findAll("tr", {"id" : re.compile('eventRowId.*')})
         date_div = soup.find("div", {"id" : "widgetFieldDateRange"})
@@ -40,7 +42,9 @@ class Command(BaseCommand):
 
         for er in event_rows:
             result = has_result = 0
-            time = er.find("td", {'class': 'time'}).attrs['evtstrttime'].strip()
+	    print er
+            #time = er.find("td", {'class': 'time'}).attrs['evtstrttime'].strip()
+	    time = er.find("td", {'class': 'time'}).text.strip()
             zone_td = er.find("td", {'class': 'flagCur'})
             region = zone_td.find("span").attrs['title'].strip()
             currency = zone_td.text.strip()
@@ -48,6 +52,8 @@ class Command(BaseCommand):
             title = er.find("td", {'class': 'event'}).text.strip()
 
             actual_elm = er.find("td", {'class': 'act'})
+	    if not actual_elm: continue
+	    print actual_elm.text
             actual = to_digits(actual_elm.text.strip())
             forecast = to_digits(er.find("td", {'class': 'fore'}).text.strip())
             previous = to_digits(er.find("td", {'class': 'prev'}).text.strip())
@@ -62,10 +68,15 @@ class Command(BaseCommand):
                 result = importance * -1 if actual < previous else 1
                 has_result = True
 
-            dttm = datetime.datetime(year, month, day, int(time.split(':')[0]), int(time.split(':')[1]))
-            dttm = dttm.replace(tzinfo=timezone('UTC'))
-            dttm = dttm.replace(tzinfo=timezone(settings.TIME_ZONE))
+	    from django.utils import timezone
 
+            dttm = datetime.datetime(year, month, day, int(time.split(':')[0]), int(time.split(':')[1]))
+            #dttm = dttm.replace(tzinfo=timezone('UTC'))
+            #dttm = dttm.replace(tzinfo=timezone(settings.TIME_ZONE))
+	    dt_aware = timezone.make_aware(dttm, timezone.get_current_timezone())
+    
+
+	    print dttm, dt_aware
             if has_result:
 
                 sentiment = CalendarDataState.NEUTRAL
